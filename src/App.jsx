@@ -1,73 +1,111 @@
-function App() {
+import { useEffect, useState } from "react";
+import Navbar from "./components/Navbar";
+import OpportunityCard from "./components/OpportunityCard";
+import SubmitForm from "./components/SubmitForm";
+import ProfileForm from "./components/ProfileForm";
+
+const API = import.meta.env.VITE_BACKEND_URL || "";
+
+function Browse() {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const res = await fetch(`${API}/opportunities`);
+      const data = await res.json();
+      setItems(data);
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const verify = async (id) => {
+    await fetch(`${API}/opportunities/${id}/verify`, { method: "POST" });
+    const res = await fetch(`${API}/opportunities?published_only=false`);
+    const data = await res.json();
+    setItems(data);
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Subtle pattern overlay */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.05),transparent_50%)]"></div>
+    <div className="space-y-4">
+      {loading && <div className="text-blue-200">Loading opportunities...</div>}
+      {!loading && items.length === 0 && (
+        <div className="text-blue-200">No opportunities yet. Add one from Submit tab.</div>
+      )}
+      {!loading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {items.map((it) => (
+            <OpportunityCard key={it.id} item={it} onVerify={verify} />)
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
-      <div className="relative min-h-screen flex items-center justify-center p-8">
-        <div className="max-w-2xl w-full">
-          {/* Header with Flames icon */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center mb-6">
-              <img
-                src="/flame-icon.svg"
-                alt="Flames"
-                className="w-24 h-24 drop-shadow-[0_0_25px_rgba(59,130,246,0.5)]"
-              />
-            </div>
+function Recommend() {
+  const [email, setEmail] = useState("");
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-            <h1 className="text-5xl font-bold text-white mb-4 tracking-tight">
-              Flames Blue
-            </h1>
+  const fetchRec = async () => {
+    setLoading(true);
+    const res = await fetch(`${API}/recommendations/${encodeURIComponent(email)}`);
+    const data = await res.json();
+    setItems(data.items || []);
+    setLoading(false);
+  };
 
-            <p className="text-xl text-blue-200 mb-6">
-              Build applications through conversation
-            </p>
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <input className="input" placeholder="Enter your profile email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <button onClick={fetchRec} className="px-3 py-2 rounded-md bg-blue-500 text-white">Get recommendations</button>
+      </div>
+      {loading && <div className="text-blue-200">Loading recommendations...</div>}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {items.map((it) => (
+          <OpportunityCard key={it.id} item={it} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [tab, setTab] = useState("browse");
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-blue-50">
+      <div className="absolute inset-0 bg-[radial-gradient(600px_circle_at_10%_10%,rgba(37,99,235,0.15),transparent_40%),radial-gradient(600px_circle_at_90%_20%,rgba(56,189,248,0.12),transparent_40%)]" />
+      <div className="relative max-w-6xl mx-auto px-6 py-8">
+        <Navbar current={tab} onChange={setTab} />
+
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            {tab === "browse" && <Browse />}
+            {tab === "submit" && <SubmitForm onCreated={() => setTab("browse")} />}
+            {tab === "recommend" && <Recommend />}
           </div>
-
-          {/* Instructions */}
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-blue-500/20 rounded-2xl p-8 shadow-xl mb-6">
-            <div className="flex items-start gap-4 mb-6">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-lg flex items-center justify-center font-bold">
-                1
+          <div className="lg:col-span-1 space-y-6">
+            {tab === "profile" && <ProfileForm />}
+            {tab === "browse" && (
+              <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                <h3 className="text-white font-semibold mb-2">How Dalilah works</h3>
+                <ul className="text-sm text-blue-200 list-disc pl-5 space-y-1">
+                  <li>Everything is human-curated and verified.</li>
+                  <li>Only high-value opportunities in Saudi region.</li>
+                  <li>Personalized recommendations based on your profile.</li>
+                </ul>
               </div>
-              <div>
-                <h3 className="font-semibold text-white mb-1">Describe your idea</h3>
-                <p className="text-blue-200/80 text-sm">Use the chat panel on the left to tell the AI what you want to build</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4 mb-6">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-lg flex items-center justify-center font-bold">
-                2
-              </div>
-              <div>
-                <h3 className="font-semibold text-white mb-1">Watch it build</h3>
-                <p className="text-blue-200/80 text-sm">Your app will appear in this preview as the AI generates the code</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-lg flex items-center justify-center font-bold">
-                3
-              </div>
-              <div>
-                <h3 className="font-semibold text-white mb-1">Refine and iterate</h3>
-                <p className="text-blue-200/80 text-sm">Continue the conversation to add features and make changes</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="text-center">
-            <p className="text-sm text-blue-300/60">
-              No coding required • Just describe what you want
-            </p>
+            )}
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
